@@ -127,15 +127,15 @@ class MultimodalVGG16(nn.Module):
 # Training + Evaluation Pipeline
 # ===============================================================
 def main():
-    train_dir = "data/train"
-    val_dir = "data/val"
-    test_dir = "data/test"
-    results_dir = "results/follicular_multimodal_vgg16"
+    train_dir = "/kaggle/working/Classification-RFH-and-FL/data"
+    val_dir = "/kaggle/working/Classification-RFH-and-FL/data"
+    test_dir = "/kaggle/working/Classification-RFH-and-FL/data"
+    results_dir = "/kaggle/working/results/follicular_multimodal_vgg16"
     os.makedirs(results_dir, exist_ok=True)
 
-    train_df = pd.read_excel(os.path.join(train_dir, "clinical_data_train.xlsx"))
-    val_df = pd.read_excel(os.path.join(val_dir, "clinical_data_val.xlsx"))
-    test_df = pd.read_excel(os.path.join(test_dir, "clinical_data_test.xlsx"))
+    train_df = pd.read_excel(os.path.join(train_dir, "supplementary_table_5.xlsx"))
+    val_df = pd.read_excel(os.path.join(val_dir, "supplementary_table_6.xlsx"))
+    test_df = pd.read_excel(os.path.join(test_dir, "supplementary_table_4.xlsx"))
 
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
