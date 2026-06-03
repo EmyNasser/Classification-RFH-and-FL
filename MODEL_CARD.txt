@@ -1,0 +1,215 @@
+🧠 Model Card — Multimodal AI for Lymphoid Lesion Classification
+1. Model Overview
+This repository contains deep learning, graph-based, and traditional machine learning models developed to classify Reactive Follicular Hyperplasia (RFH) and Follicular Lymphoma (FL) using histopathological data.
+The proposed framework integrates:
+CNN-based image embeddings (AlexNet, VGG16, ResNet18),
+Cell-level representations derived from CellViT++,
+Spatial descriptors obtained via Cell Graph Neural Networks (Cell-GNN),
+Morphometric nuclear features, and
+Clinicopathological variables,
+through a late-fusion multimodal architecture.
+The system is designed as a research and proof-of-concept tool for computational pathology.
+
+2. Data Used
+Source
+108 whole-slide images (WSIs)
+54 RFH
+54 FL
+Multicentre cohort
+
+Image Processing
+Patch size: 299 × 299 pixels
+Magnification: 40×
+Pre-processing:
+ROI selection and background removal using U-Net++
+Macenko colour normalisation
+Data augmentation (training only):
+Rotations (90°, 180°, 270°)
+Gaussian blur
+
+Cell-Level Analysis
+Nuclear segmentation and embedding extraction: CellViT++
+Morphometric features:
+Nuclear area
+Perimeter
+Circularity
+Eccentricity
+Mean haematoxylin optical density (OD)
+
+External Validation
+Two independent cohorts (9 cases each), used to assess generalisability.
+
+Clinical Variables
+Age
+Sex
+Lesion location
+
+3. Model Performance Summary
+🧩 Morphometric Analysis
+Quantitative nuclear morphometry demonstrated statistically significant differences between RFH and FL:
+
+FL nuclei:
+Larger nuclear area (p < 0.0051)
+Greater perimeter (p < 0.0105)
+Higher eccentricity (p < 0.0001)
+
+RFH nuclei:
+Higher circularity (p < 0.0026)
+Mean optical density (OD):
+No significant difference (p > 0.1614)
+These findings indicate a clear morphometric distinction between benign and malignant follicular lesions.
+
+🧮 Traditional Machine Learning (XGBoost)
+An XGBoost classifier trained on clinicopathological and morphometric variables achieved:
+Accuracy: 0.788
+ROC AUC: 0.904
+F1-score: 0.741
+Precision: 0.909
+Recall: 0.625
+
+Feature importance (SHAP)
+Age: 2.515
+Lesion location: 0.246
+Nuclear eccentricity: 0.478
+Nuclear area: 0.387
+Nuclear circularity: 0.373
+Features with SHAP values < 0.2 were selected for inclusion in multimodal models.
+
+🧠 Multimodal Patch-Level Models
+AlexNet
+Internal accuracy: 0.865 | F1-score: 0.872
+EV1 accuracy: 0.875
+EV2 accuracy: 0.830
+
+AlexNet + Segmentation
+Internal accuracy: 0.875
+EV1 accuracy: 0.850
+EV2 accuracy: 0.876
+ROC AUC range: 0.692–0.945
+
+ResNet18
+Internal accuracy: 0.920 | F1-score: 0.919 | AUC: 0.954
+EV1 accuracy: 0.920
+EV2 accuracy: 0.805
+
+ResNet18 + Segmentation
+Internal accuracy: 0.860
+EV1 accuracy: 0.905
+EV2 accuracy: 0.805
+Stable calibration (loss ≈ 0.002)
+
+VGG16
+Internal accuracy: 0.890 | F1-score: 0.897
+EV1 accuracy: 0.865
+EV2 accuracy: 0.855
+
+VGG16 + Segmentation
+Internal accuracy: 0.880
+EV1 accuracy: 0.775
+EV2 accuracy: 0.690
+
+👩‍⚕️ Multimodal Patient-Level Models
+AlexNet
+Internal accuracy: 0.964
+EV1 accuracy: 0.940
+EV2 accuracy: 0.871
+ROC AUC: 0.977–0.954
+
+AlexNet + Segmentation
+Internal accuracy: 0.866
+EV1 accuracy: 0.857
+EV2 accuracy: 0.878
+Improved calibration (ECE: 0.174–0.193)
+
+ResNet18
+Internal accuracy: 0.891
+EV1 accuracy: 0.716
+EV2 accuracy: 0.908
+Excellent calibration in EV2 (ECE: 0.011)
+
+ResNet18 + Segmentation
+Internal accuracy: 0.914
+External accuracy range: 0.675–0.900
+
+VGG16
+Internal accuracy: 0.833
+External accuracy range: 0.694–0.822
+
+VGG16 + Segmentation
+Internal accuracy: 0.849
+External accuracy range: 0.679–0.740
+
+🧬 Vision Transformer–Based CellViT++
+Dice coefficient: 0.97
+IoU: 0.96
+Pixel accuracy: 0.98
+Stable external performance across centres
+
+When integrated into the classification pipeline:
+Accuracy: 95.7%
+Precision: 94.1%
+Recall: 95.0%
+F1-score: 94.5%
+ROC AUC: 0.97
+
+Patient-level aggregation achieved:
+Accuracy: 93.5%
+Sensitivity: 94.0%
+Specificity: 93.0%
+Good calibration (ECE = 0.06)
+
+🔍 Grad-CAM Explainability
+Training: accuracy 0.926 | AUC 0.934
+Validation: accuracy 0.776 | AUC 0.737
+External: accuracy 0.817 | AUC 0.847
+Activation maps consistently highlighted biologically relevant regions, particularly nuclear architecture and follicular organisation.
+
+🧠 Cell-GNN Spatial Analysis
+RFH patches analysed: 46,877
+FL patches analysed: 38,317
+
+Statistical testing
+Mann–Whitney U: p < 0.001
+Welch’s t-test: t = 1011.26, df = 53,893.92, p < 0.001
+
+Effect sizes (FL − RFH)
+Cliff’s delta: 0.2235 (95% CI: 0.2235–0.2235)
+Hedges’ g: −6.65 (95% CI: −6.69 to −6.61)
+
+👨‍⚕️ Pathologists’ Evaluation
+Pathologist 1:
+Accuracy: 82.4%
+F1-score: 0.829
+κ = 0.648
+
+Pathologist 2:
+Accuracy: 86.1%
+F1-score: 0.854
+κ = 0.722
+
+Interobserver agreement:
+κ = 0.668 (95% CI: 0.527–0.810)
+Overall agreement: 83.3%
+
+4. Intended Use
+Purpose: Assist research into RFH vs FL differentiation
+Intended users: Pathologists, pathology researchers, AI developers
+Deployment: Research and proof-of-concept only
+Input: H&E-stained patches (299 × 299, 20×) with optional clinical data
+
+5. Limitations
+Moderate dataset size
+Limited number of external validation centres
+Patch-based inference does not capture full WSI context
+No evaluation on non-H&E stains or frozen sections
+
+6. Potential Biases
+Demographic and institutional bias
+ROI selection bias due to expert annotations
+Mitigated through colour normalisation, class weighting, and multicentre data
+
+7. Ethical and Responsible AI Considerations
+Outputs are assistive, not diagnostic
+Interpretability ensured via Grad-CAM and SHAP
+Data anonymisation and ethical approvals respected
+Further large-scale validation required prior to clinical use

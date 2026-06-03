@@ -1,0 +1,82 @@
+⚙️ System Requirements
+🖥️ Operating System
+Ubuntu 20.04.1 LTS (64-bit)
+
+🐍 Programming Language
+Python 3.12.11
+
+🔧 Core Frameworks and Libraries
+Deep Learning
+PyTorch 2.8.0 (CUDA 12.8)
+TorchVision 0.19.0
+TorchAudio 2.8.0
+
+Scientific Computing & Data Processing
+NumPy 1.26.4
+Pandas 2.2.3
+Scikit-learn 1.5.2
+OpenPyXL 3.1.5
+
+Image Processing & Visualisation
+Pillow 10.4.0
+Matplotlib 3.9.2
+Seaborn 0.13.2
+tqdm 4.66.5
+
+Model Interpretability
+SHAP (via scikit-learn / XGBoost pipeline)
+Grad-CAM (implemented within project codebase)
+
+📦 Conda / Package Channels
+pytorch
+nvidia
+defaults
+
+💻 Hardware Requirements
+CPU: Intel Xeon W-2295
+18 cores / 36 threads
+RAM: 125 GB
+
+GPU:
+3 × NVIDIA GeForce RTX 3090
+24 GB VRAM each
+CUDA 12.8 compatible
+
+Disk Space:
+Minimum 1 TB recommended
+Required for whole-slide images, extracted patches, intermediate outputs, and trained model weights
+
+🧩 Software Dependencies by Component
+Core Components
+Deep Learning: PyTorch
+Data Processing: NumPy, Pandas, OpenPyXL
+Visualisation: Matplotlib, Seaborn
+Machine Learning: XGBoost (via scikit-learn API)
+Explainability: SHAP, Grad-CAM
+
+Model-Specific Notes
+CellViT++ use their original implementations; only wrapper and inference scripts are included in this repository.
+All required hyperparameters are documented in the README and Model Card.
+
+🛠️ Installation
+git clone https://github.com/lucas-lacerda-de-souza/Classification-RFH-and-FL.git
+cd Classification-RFH-and-FL
+pip install -r requirements.txt
+⚠️ Note: CUDA 12.8 and compatible NVIDIA drivers must be installed prior to PyTorch installation for GPU acceleration.
+
+📂 Data and Code Availability
+Code: Publicly available on GitHub
+https://github.com/lucas-lacerda-de-souza/Classification-RFH-and-FL
+
+Data:
+Synthetic example data included in the repository for demonstration purposes
+Original clinical and histopathological datasets are not publicly available due to ethical and privacy constraints
+
+Model Weights:
+Publicly available via Zenodo
+DOI: https://doi.org/10.5281/zenodo.18190502
+
+✅ Reproducibility Notes
+Random seeds are fixed (torch, numpy, random)
+Mixed precision (CUDA) supported
+Multi-GPU training supported via torch.nn.DataParallel

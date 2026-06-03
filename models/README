@@ -1,0 +1,164 @@
+🧠 RFH vs FL – Computational Pathology Models
+
+This repository contains the modelling pipeline used in the study “Classification of Reactive Follicular Hyperplasia (RFH) and Follicular Lymphoma (FL)”, integrating histopathological images, 
+cell-level spatial organisation, morphometric features, and clinicopathological data.
+
+The project combines:
+Deep learning (CNNs and Vision Transformers)
+Graph Neural Networks (GNNs)
+Multimodal learning
+Classical machine learning with statistical interpretability
+
+
+📘 Model Categories
+1. Multimodal Deep Learning
+
+These scripts combine histopathological image features with clinical variables to improve diagnostic performance.
+
+             Script                    │     Level     │                            **Description**
+multimodal_alexnet_patch_level.py	   │     Patch     │       AlexNet architecture for patch-level multimodal fusion.
+multimodal_alexnet_patient_level.py	   │    Patient    │         Aggregated patient-level model using mean feature pooling.
+multimodal_resnet18_patch_level.py	   │     Patch     │   ResNet18-based model integrating local image patches and tabular data.
+multimodal_resnet18_patient_level.py   │    Patient    │         ResNet18 model trained on patient-level aggregated embeddings.
+multimodal_vgg16_patch_level.py	       │     Patch     │       VGG16 model for multimodal feature learning at the patch level.
+multimodal_vgg16_patient_level.py	   │    Patient    │         VGG16 architecture applied at patient-level granularity.
+
+
+All multimodal models include:
+Late fusion between CNN features and clinical embeddings
+Weighted loss functions for class imbalance
+ROC/PR curve generation
+Support for multi-GPU training (torch.nn.DataParallel)
+
+
+2. Cell-Level Vision Transformers (CellViT++)
+🔎 Important note on implementation
+CellViT++ are established, peer-reviewed architectures.
+In this study, their original implementations were used without architectural modifications.
+
+For this reason:
+The full source code of CellViT++ is not redistributed in this repository
+Only wrapper scripts and downstream analysis pipelines are provided
+All hyperparameters and configurations used are fully documented below
+
+Purpose
+Nuclear segmentation
+Cell-level feature extraction
+Morphometric and appearance embeddings
+
+Hyperparameters and configuration
+Architecture: Vision Transformer–based (CellViT++)
+Input size: 256 × 256 pixels
+Magnification: 40×
+Pretraining: As provided in the original CellViT++ release
+
+Output:
+Binary nuclear masks
+Cell-level embeddings
+Morphometric descriptors (area, eccentricity, etc.)
+
+Mode: Inference only (no retraining)
+Framework: PyTorch
+Precision: Mixed precision (CUDA)
+
+Usage in this project
+Outputs from CellViT++ are used as inputs for:
+XGBoost models
+Cell Graph Neural Network (Cell-GNN)
+Multimodal learning pipelines
+
+3. Cell Graph Neural Network (Cell-GNN)
+🔎 Important note on implementation
+Cell-GNN is a previously established graph-based framework.
+The original implementation was used without architectural changes.
+
+Thus:
+The full Cell-GNN source code is not duplicated here
+Only preprocessing, graph construction, and analysis scripts are included
+Hyperparameters are explicitly reported
+
+Purpose
+To model cell–cell spatial relationships and quantify tissue organisation patterns.
+
+Graph construction
+Nodes: Cell nuclei centroids
+Edge definition: k-nearest neighbours (k = 8)
+Distance metric: Euclidean distance
+Graph type: Undirected
+Self-loops: Disabled
+
+GNN architecture and hyperparameters
+GNN type: GraphSAGE
+Number of layers: 3
+Hidden dimension: 128
+Node embedding dimension: 128
+Aggregation: Mean
+Activation: ReLU
+Normalisation: Batch Normalisation
+Dropout: 0.3
+
+Training / inference configuration
+Optimiser: AdamW
+Learning rate: 1 × 10⁻³
+Weight decay: 1 × 10⁻⁴
+Batch size: 16 graphs
+Epochs: 100
+Early stopping: Patience = 15
+Random seed: Fixed
+
+Outputs
+Mean intercellular distance per patch
+Patch- and patient-level graph descriptors
+Statistical features for group comparison
+
+4. Image Segmentation (CNN-based)
+              Script	                       Model                                  Description
+segmentation_unet++.py             	     │    U-Net++    │         U-Net++ with attention gates for tissue segmentation
+
+5. Classical Machine Learning
+Script	                                       Model                                  Description
+xgboost_classification_cpc_mpa.R	     │    U-Net++    │        XGBoost on clinicopathological and morphometric features
+xgboost_classification_gradcam.R	     │    U-Net++    │                XGBoost on Grad-CAM–derived features
+
+Features
+Train / validation / test split
+Feature importance plots
+Confusion matrix and ROC/PR curves
+CSV export to /results/
+
+⚙️ Patch Generation and Pre-processing
+Patch size: 299 × 299 pixels
+Overlap: 20%
+Colour normalisation: Macenko
+Data augmentation:
+Rotations (90°, 180°, 270°)
+Gaussian blur
+
+Dataset split
+Training: 80% (73 cases, 276,823 patches)
+Validation: 10% (9 cases, 32,043 patches)
+Test: 10% (8 cases, 31,939 patches)
+External validation: 2 cohorts (9 cases each)
+
+Final dataset size
+Training: 1,384,115 patches
+Validation: 160,215 patches
+Test: 159,695 patches
+
+🧬 Reproducibility
+Python: 3.12.11
+PyTorch: 2.8.0 + CUDA 12.8
+GPUs: 3 × NVIDIA RTX 3090 (24 GB)
+OS: Ubuntu 20.04 LTS
+RAM: 125 GB
+Determinism ensured via fixed random seeds (torch, numpy, random)
+
+📎 Reproducibility Statement
+Although CellViT / CellViT++ and Cell-GNN implementations are not redistributed, all results can be fully reproduced by:
+Using the original public implementations
+Applying the exact hyperparameters reported in this README
+Running the provided preprocessing, inference, and analysis scripts
+
+📜 License and Citation
+This repository is intended for academic and research use.
+If you use this code, please cite the corresponding paper and the original CellViT and Cell-GNN publications.
