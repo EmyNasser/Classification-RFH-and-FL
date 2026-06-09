@@ -162,8 +162,9 @@ def main():
     data_dir,
     transform
     )
-
-    
+    print("Total images =", len(full_dataset))
+    print("Classes =", full_dataset.class_to_idx)
+        
     n = len(full_dataset)
 
     train_size = int(0.7 * n)
