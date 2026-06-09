@@ -157,7 +157,7 @@ def main():
     # Data
     # ------------------------------
     
-    data_dir = "/kaggle/input/datasets/eman12345nasser/rhf-data"
+    data_dir = "/kaggle/input/datasets/eman12345nasser/ucmerced-landuse/Images"
     full_dataset = MultimodalDataset(
     data_dir,
     transform
