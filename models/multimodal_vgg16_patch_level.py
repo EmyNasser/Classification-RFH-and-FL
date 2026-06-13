@@ -214,6 +214,7 @@ def main():
     history = []
 
     for epoch in range(100):
+        print(f"\n===== START EPOCH {epoch+1} =====")
         model.train()
         train_loss, correct, total = 0.0, 0, 0
 
