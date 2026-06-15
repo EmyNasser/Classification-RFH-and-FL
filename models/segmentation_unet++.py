@@ -43,22 +43,53 @@ torch.backends.cudnn.benchmark = True  # Enable CUDA convolution auto-tuning
 # DATASET
 # ==========================================================
 class SegmentationDataset(Dataset):
-    def __init__(self, images_dir, masks_dir, img_size=256):
-        self.images = sorted([os.path.join(images_dir, f) for f in os.listdir(images_dir)
-                              if f.endswith((".png", ".jpg", ".jpeg"))])
-        self.masks = sorted([os.path.join(masks_dir, f) for f in os.listdir(masks_dir)
-                             if f.endswith((".png", ".jpg", ".jpeg"))])
-        self.transform_img = T.Compose([T.Resize((img_size, img_size)), T.ToTensor()])
-        self.transform_mask = T.Compose([T.Resize((img_size, img_size)), T.ToTensor()])
+
+    def __init__(self, root_dir, img_size=256):
+
+        self.images_dir = os.path.join(root_dir, "images")
+        self.masks_dir  = os.path.join(root_dir, "masks")
+
+        self.images = sorted([
+            f for f in os.listdir(self.images_dir)
+            if f.lower().endswith(
+                (".png", ".jpg", ".jpeg", ".tif", ".tiff")
+            )
+        ])
+
+        self.transform_img = T.Compose([
+            T.Resize((img_size, img_size)),
+            T.ToTensor()
+        ])
+
+        self.transform_mask = T.Compose([
+            T.Resize((img_size, img_size)),
+            T.ToTensor()
+        ])
 
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, idx):
-        img = Image.open(self.images[idx]).convert("RGB")
-        mask = Image.open(self.masks[idx]).convert("L")
-        return self.transform_img(img), self.transform_mask(mask)
 
+        image_name = self.images[idx]
+
+        image_path = os.path.join(
+            self.images_dir,
+            image_name
+        )
+
+        mask_path = os.path.join(
+            self.masks_dir,
+            image_name
+        )
+
+        image = Image.open(image_path).convert("RGB")
+        mask  = Image.open(mask_path).convert("L")
+
+        image = self.transform_img(image)
+        mask  = self.transform_mask(mask)
+
+        return image, mask
 
 # ==========================================================
 # BUILDING BLOCKS
@@ -214,12 +245,34 @@ def compute_metrics(outputs, masks):
 # ==========================================================
 # TRAINING PIPELINE
 # ==========================================================
-def train_model(images_dir, masks_dir, results_dir="results", epochs=50, batch_size=4, img_size=256, device="cuda"):
+def train_model(train_dataset,
+    val_dataset,
+    results_dir="results",
+    epochs=50,
+    batch_size=4,
+    device="cuda"):
     os.makedirs(results_dir, exist_ok=True)
-    dataset = SegmentationDataset(images_dir, masks_dir, img_size=img_size)
+    dataset = SegmentationDataset(
+        images_dir,
+        masks_dir,
+        img_size=img_size
+    )
 
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True,
-                        num_workers=os.cpu_count(), pin_memory=True)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=2,
+        pin_memory=True
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=2,
+        pin_memory=True
+    )
 
     model = UNetPlusPlus().to(device)
     if torch.cuda.device_count() > 1:
@@ -310,14 +363,44 @@ def infer_and_save(model, input_dir, output_dir, img_size=256, save_size=299, de
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    train_images_dir = "./train_images"
-    train_masks_dir  = "./train_masks"
-    new_patches_dir  = "./test_images"
-    pred_masks_dir   = "./predicted_masks"
+    from torch.utils.data import random_split
+    full_dataset = SegmentationDataset(
+        root_dir="/kaggle/input/dataset",
+        img_size=256
+    )
 
+    n = len(full_dataset)
+
+    train_size = int(0.7*n)
+    val_size   = int(0.15*n)
+    test_size  = n - train_size - val_size
+
+    train_dataset, val_dataset, test_dataset = random_split(
+        full_dataset,
+        [train_size, val_size, test_size],
+        generator=torch.Generator().manual_seed(42)
+    )
+    train_loader = DataLoader(
+    train_dataset,
+    batch_size=4,
+    shuffle=True
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=4,
+        shuffle=False
+    )
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=4,
+        shuffle=False
+    )
     model = train_model(train_images_dir, train_masks_dir, results_dir="results",
                         epochs=50, batch_size=2, img_size=256, device=device)
-
+    new_patches_dir = "/kaggle/input/test-images"
+    pred_masks_dir = "./predicted_masks"
     model_infer = UNetPlusPlus().to(device)
     model_infer.load_state_dict(torch.load("results/unetpp_attention.pth", map_location=device))
     if torch.cuda.device_count() > 1:
