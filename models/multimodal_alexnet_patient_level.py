@@ -213,7 +213,7 @@ def main():
 
     # Training
     model.train()
-    for images, clinical, labels, _ in tqdm(train_loader, desc="Training"):
+    for images, clinical, labels in tqdm(train_loader, desc="Training"):
         images, clinical, labels = images.to(device), clinical.to(device), labels.to(device)
         optimizer.zero_grad()
         loss = criterion(model(images, clinical), labels)
@@ -225,7 +225,7 @@ def main():
     all_labels = []
     all_preds = []    
     with torch.no_grad():
-        for images, clinical, labels, ids in tqdm(test_loader, desc="Testing"):
+        for images, clinical, labels in tqdm(test_loader, desc="Testing"):
             images, clinical = images.to(device), clinical.to(device)
             outputs = model(images, clinical)
 
