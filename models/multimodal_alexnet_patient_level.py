@@ -277,7 +277,6 @@ def main():
     print(f"Precision : {precision:.4f}")
     print(f"Recall    : {recall:.4f}")
     print(f"F1 Score  : {f1:.4f}")
-    print(f"\nPatient-level AUC: {metrics['auc']:.3f} (95% CI: {metrics['auc_ci_low']:.3f} - {metrics['auc_ci_high']:.3f})")
     print("Results and plots saved.")
 
 
