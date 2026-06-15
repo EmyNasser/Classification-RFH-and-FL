@@ -217,7 +217,7 @@ def main():
     model.eval()
     all_labels, all_preds = [], []
     with torch.no_grad():
-        for images, clinical, labels, ids in tqdm(test_loader, desc="Testing"):
+        for images, clinical, labels in tqdm(test_loader, desc="Testing"):
             images, clinical = images.to(device), clinical.to(device)
             outputs = model(images, clinical)
             preds = outputs.argmax(dim=1)
