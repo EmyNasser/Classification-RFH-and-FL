@@ -47,45 +47,61 @@ from tqdm import tqdm
 # Dataset Definition
 # ===============================================================
 class MultimodalDataset(Dataset):
-    def __init__(self, dataframe, image_dir, transform=None):
-        self.image_dir = image_dir
+
+    def __init__(self, image_dir, transform=None):
+
         self.transform = transform
         self.items = []
 
-        if "Classe" not in dataframe.columns or "CaseID" not in dataframe.columns:
-            raise ValueError("Excel file must contain 'Classe' and 'CaseID' columns.")
+        classes = sorted([
+            d for d in os.listdir(image_dir)
+            if os.path.isdir(os.path.join(image_dir, d))
+        ])
 
-        self.clinical_cols = [c for c in dataframe.columns if c not in ["Classe", "CaseID"]]
-        if not self.clinical_cols:
-            raise ValueError("No clinical features found beyond 'Classe' and 'CaseID'.")
+        self.class_to_idx = {
+            cls:i for i, cls in enumerate(classes)
+        }
 
-        for _, row in dataframe.iterrows():
-            class_dir = os.path.join(self.image_dir, str(row["Classe"]))
-            case_dir = os.path.join(class_dir, str(row["CaseID"]))
-            if not os.path.isdir(case_dir):
-                continue
+        for cls in classes:
 
-            clinical_vec = [float(row[c]) for c in self.clinical_cols]
+            cls_dir = os.path.join(image_dir, cls)
 
-            for root, _, files in os.walk(case_dir):
-                for f in files:
-                    if f.lower().endswith((".png", ".jpg", ".jpeg")):
-                        self.items.append({
-                            "patch_path": os.path.join(root, f),
-                            "clinical": clinical_vec,
-                            "label": int(row["Classe"])
-                        })
+            for file in os.listdir(cls_dir):
+
+                if file.lower().endswith(
+                    (".png",".jpg",".jpeg",".tif",".tiff")
+                ):
+
+                    self.items.append({
+                        "patch_path": os.path.join(cls_dir,file),
+                        "label": self.class_to_idx[cls]
+                    })
 
     def __len__(self):
         return len(self.items)
 
     def __getitem__(self, idx):
+
         sample = self.items[idx]
-        image = Image.open(sample["patch_path"]).convert("RGB")
+
+        image = Image.open(
+            sample["patch_path"]
+        ).convert("RGB")
+
         if self.transform:
             image = self.transform(image)
-        clinical = torch.tensor(sample["clinical"], dtype=torch.float32)
-        label = torch.tensor(sample["label"], dtype=torch.long)
+
+        # dummy clinical feature
+        clinical = torch.zeros(
+            1,
+            dtype=torch.float32
+        )
+
+        label = torch.tensor(
+            sample["label"],
+            dtype=torch.long
+        )
+
         return image, clinical, label
 
 # ===============================================================
@@ -129,18 +145,6 @@ def main():
     # ------------------------------
     # Paths
     # ------------------------------
-    train_dir = "data/train"
-    val_dir = "data/val"
-    test_dir = "data/test"
-    results_dir = "results/follicular_multimodal_resnet18"
-    os.makedirs(results_dir, exist_ok=True)
-
-    # ------------------------------
-    # Data
-    # ------------------------------
-    train_df = pd.read_excel(os.path.join(train_dir, "clinical_data_train.xlsx"))
-    val_df   = pd.read_excel(os.path.join(val_dir, "clinical_data_val.xlsx"))
-    test_df  = pd.read_excel(os.path.join(test_dir, "clinical_data_test.xlsx"))
 
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -149,16 +153,43 @@ def main():
                              [0.229, 0.224, 0.225])
     ])
 
-    train_dataset = MultimodalDataset(train_df, train_dir, transform)
-    val_dataset   = MultimodalDataset(val_df, val_dir, transform)
-    test_dataset  = MultimodalDataset(test_df, test_dir, transform)
+    results_dir = "/kaggle/working/results"
+    os.makedirs(results_dir, exist_ok=True)
+    from torch.utils.data import random_split
+# ------------------------------
+    # Data
+    # ------------------------------
+    
+    data_dir = "/kaggle/input/datasets/eman12345nasser/ucmerced-landuse/Images"
+    full_dataset = MultimodalDataset(
+    data_dir,
+    transform
+    )
+    print("Total images =", len(full_dataset))
+    print("Classes =", full_dataset.class_to_idx)
+        
+    n = len(full_dataset)
 
+    train_size = int(0.5 * n)
+    val_size   = int(0.15 * n)
+    test_size  = n - train_size - val_size
+
+    train_dataset, val_dataset, test_dataset = random_split(
+        full_dataset,
+        [train_size, val_size, test_size],
+        generator=torch.Generator().manual_seed(42)
+    )
+    
     train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
-    val_loader   = DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=4)
-    test_loader  = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers=4)
 
-    clinical_input_dim = len(train_dataset.clinical_cols)
-    model = MultimodalResNet18(clinical_input_dim, num_classes=2)
+    clinical_input_dim = 1
+    num_classes = len(full_dataset.class_to_idx)   
+    model = MultimodalResNet18( 
+        clinical_input_dim,
+        num_classes=num_classes
+    )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
@@ -177,6 +208,8 @@ def main():
     history = []
 
     for epoch in range(100):
+        print(f"\n===== START EPOCH {epoch+1} =====")
+
         model.train()
         train_loss, correct, total = 0.0, 0, 0
 
@@ -252,12 +285,12 @@ def main():
     metrics = {
         "Loss (Val Last)": history[-1]["val_loss"] if history else float("nan"),
         "Accuracy": accuracy_score(y_true, y_pred),
-        "Precision": precision_score(y_true, y_pred, zero_division=0),
-        "Recall (Sensitivity)": recall_score(y_true, y_pred, zero_division=0),
-        "F1 Score": f1_score(y_true, y_pred, zero_division=0),
+        "Precision": precision_score(y_true, y_pred, average="macro", zero_division=0),
+        "Recall (Sensitivity)": recall_score(y_true, y_pred, average="macro", zero_division=0),
+        "F1 Score": f1_score(y_true, y_pred, average="macro", zero_division=0),
         "Specificity": specificity,
         "Cohen Kappa": cohen_kappa_score(y_true, y_pred),
-        "AUC": roc_auc_score(y_true, y_prob) if len(set(y_true)) == 2 else float("nan"),
+        #"AUC": roc_auc_score(y_true, y_prob) if len(set(y_true)) == 2 else float("nan"),
         "True Positives": int(tp),
         "False Positives": int(fp),
         "True Negatives": int(tn),
