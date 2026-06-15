@@ -195,11 +195,20 @@ def main():
         model = nn.DataParallel(model)
     model.to(device)
 
-    labels = torch.tensor([sample['label'] for sample in train_dataset.items], dtype=torch.long)
+    train_labels = [
+    full_dataset.items[i]["label"]
+    for i in train_dataset.indices
+    ]
+
+    labels = torch.tensor(
+        train_labels,
+        dtype=torch.long
+    )
     label_counts = torch.bincount(labels)
     class_weights = len(labels) / (len(label_counts) * label_counts.float())
     criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
     optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
+
 
     # ------------------------------
     # Training
