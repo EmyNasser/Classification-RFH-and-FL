@@ -12,7 +12,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(description="RFH vs FL inference using ResNet18")
 parser.add_argument("--input_dir", type=str, required=True, help="Directory with input images")
 parser.add_argument("--output_dir", type=str, required=True, help="Directory to save predictions")
-parser.add_argument("--weights", type=str, default="weights/resnet18_rfh_fl.pth", help="Model weights")
+parser.add_argument("--weights", type=str, default="weights/vgg16_rfh_fl.pth", help="Model weights")
 parser.add_argument("--device", type=str, default="cpu", help="cpu or cuda")
 args = parser.parse_args()
 
@@ -28,8 +28,8 @@ device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 # =========================
 # Model loading
 # =========================
-model = models.resnet18(pretrained=False)
-model.fc = torch.nn.Linear(model.fc.in_features, 2)
+model = models.vgg16(pretrained=False)
+model.classifier[6] = torch.nn.Linear(model.classifier[6].in_features, 2)
 
 state_dict = torch.load(args.weights, map_location=device)
 model.load_state_dict(state_dict)
