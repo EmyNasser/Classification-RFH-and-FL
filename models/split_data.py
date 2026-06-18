@@ -25,7 +25,7 @@ for cls in os.listdir(src):
 
     train_imgs, temp_imgs = train_test_split(
         imgs,
-        test_size=0.30,
+        test_size=0.50,
         random_state=42
     )
 
