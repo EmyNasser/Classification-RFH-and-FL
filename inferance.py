@@ -12,7 +12,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(description="RFH vs FL inference using ResNet18")
 parser.add_argument("--input_dir", type=str, required=True, help="Directory with input images")
 parser.add_argument("--output_dir", type=str, required=True, help="Directory to save predictions")
-#parser.add_argument("--weights", type=str, default="weights/resnet18_rfh_fl.pth", help="Model weights")
+parser.add_argument("--weights", type=str, default="/kaggle/working/results/best_model.pt", help="Model weights")
 parser.add_argument("--device", type=str, default="cpu", help="cpu or cuda")
 args = parser.parse_args()
 
@@ -32,7 +32,9 @@ NUM_CLASSES = 21
 
 model = models.resnet18(weights=None)
 model.fc = torch.nn.Linear(model.fc.in_features, NUM_CLASSES)
-
+# Load trained weights
+state_dict = torch.load(args.weights, map_location=device)
+model.load_state_dict(state_dict)
 model.to(device)
 model.eval()
 
@@ -97,7 +99,7 @@ class_map = {
 
 image_files = [
     f for f in os.listdir(args.input_dir)
-    if f.lower().endswith((".png", ".jpg", ".jpeg"))
+    if f.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))
 ]
 
 for fname in tqdm(image_files, desc="Running inference"):
