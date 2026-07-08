@@ -12,7 +12,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(description="RFH vs FL inference using ResNet18")
 parser.add_argument("--input_dir", type=str, required=True, help="Directory with input images")
 parser.add_argument("--output_dir", type=str, required=True, help="Directory to save predictions")
-parser.add_argument("--weights", type=str, default="weights/resnet18_rfh_fl.pth", help="Model weights")
+#parser.add_argument("--weights", type=str, default="weights/resnet18_rfh_fl.pth", help="Model weights")
 parser.add_argument("--device", type=str, default="cpu", help="cpu or cuda")
 args = parser.parse_args()
 
@@ -28,13 +28,15 @@ device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 # =========================
 # Model loading
 # =========================
-model = models.resnet18(pretrained=False)
-model.fc = torch.nn.Linear(model.fc.in_features, 2)
+NUM_CLASSES = 21
 
-state_dict = torch.load(args.weights, map_location=device)
-model.load_state_dict(state_dict)
+model = models.resnet18(weights=None)
+model.fc = torch.nn.Linear(model.fc.in_features, NUM_CLASSES)
+
 model.to(device)
 model.eval()
+
+
 
 # =========================
 # Preprocessing
@@ -69,7 +71,29 @@ os.makedirs(args.output_dir, exist_ok=True)
 
 results = []
 
-class_map = {0: "RFH", 1: "FL"}
+class_map = {
+    0: "agricultural",
+    1: "airplane",
+    2: "baseballdiamond",
+    3: "beach",
+    4: "buildings",
+    5: "chaparral",
+    6: "denseresidential",
+    7: "forest",
+    8: "freeway",
+    9: "golfcourse",
+    10: "harbor",
+    11: "intersection",
+    12: "mediumresidential",
+    13: "mobilehomepark",
+    14: "overpass",
+    15: "parkinglot",
+    16: "river",
+    17: "runway",
+    18: "sparseresidential",
+    19: "storagetanks",
+    20: "tenniscourt"
+}
 
 image_files = [
     f for f in os.listdir(args.input_dir)
@@ -81,10 +105,9 @@ for fname in tqdm(image_files, desc="Running inference"):
     pred, prob = predict_image(img_path)
 
     results.append({
-        "image": fname,
-        "prediction": class_map[pred],
-        "prob_RFH": float(prob[0]),
-        "prob_FL": float(prob[1])
+    "image": fname,
+    "prediction": class_map[pred],
+    "confidence": float(prob[pred])
     })
 
 # =========================
