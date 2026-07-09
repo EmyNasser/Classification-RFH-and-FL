@@ -167,7 +167,7 @@ def main():
         
     n = len(full_dataset)
 
-    train_size = int(0.7 * n)
+    train_size = int(0.5 * n)
     val_size   = int(0.15 * n)
     test_size  = n - train_size - val_size
 
