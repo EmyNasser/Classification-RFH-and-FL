@@ -166,21 +166,7 @@ class MultimodalAlexNet(nn.Module):
         clinical_features = self.clinical_net(clinical_data)
         combined = torch.cat((x, clinical_features), dim=1)
         return self.classifier(combined)
-        checkpoint_path = os.path.join(
-            results_dir,
-            "last_model.pt"
-        )
-
-        if os.path.exists(checkpoint_path):
-
-            print("Loading checkpoint...")
-
-            model.load_state_dict(
-                torch.load(
-                    checkpoint_path,
-                    map_location=device
-                )
-            )
+        
     # ===============================================================
 # Training + Evaluation Pipeline
 # ===============================================================
@@ -188,6 +174,21 @@ def main():
     # ------------------------------
     # Paths
     # ------------------------------
+    checkpoint_path = os.path.join(
+            results_dir,
+            "last_model.pt"
+        )
+
+    if os.path.exists(checkpoint_path):
+
+        print("Loading checkpoint...")
+
+        model.load_state_dict(
+            torch.load(
+                checkpoint_path,
+                map_location=device
+            )
+        )
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
@@ -226,9 +227,7 @@ def main():
         data_dir,
         train_transform
     )
-    train_dataset.dataset.transform = train_transform
-    val_dataset.dataset.transform = test_transform
-    test_dataset.dataset.transform = test_transform
+    
     print("Total images =", len(full_dataset))
     print("Classes =", full_dataset.class_to_idx)
     pd.DataFrame({
@@ -356,10 +355,17 @@ def main():
         for imgs, clinical, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}"):
             imgs, clinical, labels = imgs.to(device), clinical.to(device), labels.to(device)
             optimizer.zero_grad()
-            outputs = model(imgs, clinical)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            with torch.cuda.amp.autocast(enabled=torch.cuda.is_available()):
+
+                outputs = model(imgs, clinical)
+
+                loss = criterion(outputs, labels)
+
+            scaler.scale(loss).backward()
+
+            scaler.step(optimizer)
+
+            scaler.update()
 
             train_loss += loss.item()
             preds = outputs.argmax(dim=1)
@@ -368,6 +374,29 @@ def main():
 
         train_acc = correct / total
         avg_train_loss = train_loss / len(train_loader)
+       
+        # Validation
+        model.eval()
+        val_loss, correct, total = 0.0, 0, 0
+        with torch.no_grad():
+            for imgs, clinical, labels in val_loader:
+                imgs, clinical, labels = imgs.to(device), clinical.to(device), labels.to(device)
+                with torch.cuda.amp.autocast(
+                    enabled=torch.cuda.is_available()
+                ):
+
+                    outputs = model(imgs, clinical)
+
+                    loss = criterion(outputs, labels)
+
+                
+
+                preds = outputs.argmax(dim=1)
+                correct += (preds == labels).sum().item()
+                total += labels.size(0)
+
+        val_acc = correct / total
+        avg_val_loss = val_loss / len(val_loader)
         writer.add_scalar(
             "Loss/train",
             avg_train_loss,
@@ -391,31 +420,6 @@ def main():
             val_acc,
             epoch
         )
-        # Validation
-        model.eval()
-        val_loss, correct, total = 0.0, 0, 0
-        with torch.no_grad():
-            for imgs, clinical, labels in val_loader:
-                imgs, clinical, labels = imgs.to(device), clinical.to(device), labels.to(device)
-                with torch.cuda.amp.autocast(
-                    enabled=torch.cuda.is_available()
-                ):
-
-                    outputs = model(imgs, clinical)
-
-                    loss = criterion(outputs, labels)
-
-                scaler.scale(loss).backward()
-
-                scaler.step(optimizer)
-
-                scaler.update()
-                preds = outputs.argmax(dim=1)
-                correct += (preds == labels).sum().item()
-                total += labels.size(0)
-
-        val_acc = correct / total
-        avg_val_loss = val_loss / len(val_loader)
         scheduler.step(avg_val_loss)
         history.append({
             "epoch": epoch + 1,
@@ -438,13 +442,7 @@ def main():
                 model.state_dict(),
                 os.path.join(results_dir,"best_model.pt")
             )
-            torch.save(
-                model.state_dict(),
-                os.path.join(
-                    results_dir,
-                    "last_model.pt"
-                )
-            )
+           
         else:
 
             counter += 1
@@ -454,8 +452,15 @@ def main():
                 print("Early stopping")
 
                 break
-
             pd.DataFrame(history).to_excel(os.path.join(results_dir, "training_history.xlsx"), index=False)
+
+        torch.save(
+                model.state_dict(),
+                os.path.join(
+                    results_dir,
+                    "last_model.pt"
+                )
+        )
         history_df = pd.DataFrame(history)
         history_df = pd.DataFrame(history)
 
@@ -729,7 +734,7 @@ def main():
 # Entry Point
 # ===============================================================
 
-
+######Inference
 def predict_image(
 
     model,
