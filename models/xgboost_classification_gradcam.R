@@ -38,7 +38,7 @@ for (pkg in packages) {
 # Point these at the output of extract_embeddings.py, e.g.:
 #   python extract_embeddings.py --backbone resnet18 --results_dir /kaggle/working/results_resnet18
 # writes to /kaggle/working/results_resnet18/embeddings/embeddings_{train,val,test}.csv
-embeddings_dir  <- "/kaggle/working/results_resnet18/embeddings"
+embeddings_dir  <- "/kaggle/working/results/embeddings"
 train_csv_path  <- file.path(embeddings_dir, "embeddings_train.csv")
 val_csv_path    <- file.path(embeddings_dir, "embeddings_val.csv")   # set to NA to auto-split from train instead
 test_csv_path   <- file.path(embeddings_dir, "embeddings_test.csv")
